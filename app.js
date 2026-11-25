@@ -3,10 +3,11 @@
 const { XIYOU_CHARACTERS: CHARACTERS, XIYOU_KNOWLEDGE: KNOWLEDGE, XIYOU_CATEGORIES: CATEGORIES, XIYOU_CURATED_QA: CURATED_QA } = window;
 
 // 正式网站通过同源服务端代理调用云端模型，访客无需 API Key，密钥不会进入浏览器。
-// file:// 仅用于本地界面预览，继续使用公共服务；公开部署请启动 server.js。
+// file:// 与静态托管（无同源代理，/api/chat 404）时自动回退到公共服务直连。
+const POLLINATIONS_OPENAI = 'https://text.pollinations.ai/openai';
 const CLOUD_ENDPOINTS = location.protocol === 'file:'
-  ? ['https://text.pollinations.ai/openai']
-  : ['/api/chat'];
+  ? [POLLINATIONS_OPENAI]
+  : ['/api/chat', POLLINATIONS_OPENAI];
 const CLOUD_MODEL = 'openai'; // Pollinations Classic 当前公开的 GPT-OSS 20B 模型名
 const CUSTOM_CFG_KEY = 'xiyou-cloud-config';
 // WebLLM: 在线加载 Hugging Face 上的开源模型（Qwen 等），浏览器 WebGPU 推理，无需 API key。
@@ -41,7 +42,7 @@ const MODEL_OPTIONS = {
 };
 const ENGINE_HINTS = {
   local: '智能本地：内置精选问答 + 本地知识检索，按角色生成回答。无需网络、无需 GPU、无延迟、不限流，任何环境都能用。想要真实大模型可切到「线上开源」或「WebLLM」。',
-  cloud: '云端模型通过本站服务端代理流式生成回答，访客无需 API Key、无需下载，手机和电脑浏览器均可使用。问题和检索片段会发送到模型服务，请勿输入敏感内容；高峰时段可能需要短暂等待。',
+  cloud: '云端模型流式生成回答：优先本站代理，静态托管时直连公共服务。访客无需 API Key、无需下载，手机和电脑浏览器均可使用。问题和检索片段会发送到模型服务，请勿输入敏感内容；高峰时段可能需要短暂等待。',
   webllm: '模型来自 Hugging Face 的开源权重（mlc-ai / Qwen），首次加载在线下载到浏览器缓存，之后可复用；无需 API key，推理全程在你的设备上。需要新版 Chrome / Edge + WebGPU。',
   litert: 'Google LiteRT-LM 端侧引擎，通过 ReadableStream 将权重直接送入 WebGPU 编译，不在内存中重复保存整份模型。模型体积较大（2.3 GB 起）；若 Hugging Face 要求授权，请先接受模型许可并填写下载 Token。',
   demo: '不下载模型、不运行大模型。只把本地检索到的知识片段按角色语气组织成回答，用于先看交互效果。'
