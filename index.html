@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>西游 · 灵谐数字分身 — LiteRT-LM 端侧演示</title>
+  <meta name="description" content="线上开源大模型与端侧模型驱动的《西游记》数字分身：本地知识检索 + 流式对话。" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-seal" aria-hidden="true">西<br />游</div>
+        <div class="brand-text">
+          <h1>灵谐 · 西游数字分身</h1>
+          <p>线上开源大模型 × 本地知识库 · 数字分身原型</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="tag tag-tech">WebGPU 端侧推理</span>
+        <span id="engine-pill" class="engine-pill mode-live"><span class="pulse"></span><span id="engine-pill-text">智能本地 · 精选知识回答</span></span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>选择分身</h2>
+            <span class="panel-sub">取经人 · 仙佛 · 妖仙</span>
+          </div>
+          <div id="character-list" class="character-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>模型引擎</h2>
+            <span class="panel-sub">线上 / 端侧</span>
+          </div>
+          <div class="engine-tabs" id="engine-tabs">
+            <button class="engine-tab active" data-engine="local">智能本地</button>
+            <button class="engine-tab" data-engine="cloud">线上开源</button>
+            <button class="engine-tab" data-engine="webllm">WebLLM</button>
+            <button class="engine-tab" data-engine="litert">LiteRT</button>
+          </div>
+          <div id="engine-status" class="status-box">
+            <div class="status-line"><span>运行状态</span><strong id="engine-state">未加载</strong></div>
+            <div class="status-line"><span>推理位置</span><strong id="engine-place">用户设备 / 演示</strong></div>
+            <div class="status-line"><span>WebGPU</span><strong id="webgpu-state">检测中…</strong></div>
+          </div>
+          <label id="local-model-label" class="field-label" for="model-select">模型</label>
+          <select id="model-select">
+            <option value="local">内置精选知识 + 角色化生成（无需网络/GPU）</option>
+          </select>
+          <div id="hf-token-wrap" class="cloud-advanced" hidden>
+            <label class="field-label" for="hf-token">Hugging Face Token（可选）</label>
+            <input type="password" id="hf-token" autocomplete="off" placeholder="仅用于下载需授权的模型" />
+            <p class="hint">若模型仓库要求接受许可，请填入有下载权限的 Token；不会写入页面源码或持久化存储。</p>
+          </div>
+          <div id="engine-progress" class="progress-wrap" hidden>
+            <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+            <div id="progress-text" class="progress-text">准备下载模型…</div>
+          </div>
+          <div class="btn-row">
+            <button id="load-engine-btn" class="btn btn-primary" hidden>加载开源模型</button>
+            <button id="unload-engine-btn" class="btn btn-ghost" hidden>切回演示模式</button>
+          </div>
+          <p class="hint" id="engine-hint">智能本地：内置精选问答 + 本地知识检索，按角色生成回答。无需网络、无需 GPU、无延迟、不限流，任何环境都能用。想要真实大模型可切到「线上开源」或「WebLLM」。</p>
+          <details class="cloud-advanced">
+            <summary>自定义接口（可选）</summary>
+            <label class="field-label" for="custom-endpoint">OpenAI 兼容地址</label>
+            <input type="text" id="custom-endpoint" placeholder="https://your-api/v1/chat/completions" />
+            <label class="field-label" for="custom-model">模型名</label>
+            <input type="text" id="custom-model" placeholder="留空则用 openai" />
+            <label class="field-label" for="custom-key">API Key（可选，存本地）</label>
+            <input type="password" id="custom-key" placeholder="sk-..." />
+            <div class="btn-row">
+              <button id="save-custom-btn" class="btn btn-ghost">保存接口</button>
+              <button id="clear-custom-btn" class="btn btn-ghost">清除</button>
+            </div>
+            <p class="hint">普通访客无需配置。管理员如需调试自有接口可在此填写；它仅保存在当前浏览器，失败时回退到本站接口或本地回答。</p>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>本地知识库</h2>
+            <span id="kb-count" class="panel-sub">0 条</span>
+          </div>
+          <label class="switch-row">
+            <input type="checkbox" id="semantic-toggle" />
+            <span class="switch-box"></span>
+            <span>EmbeddingGemma 语义检索</span>
+          </label>
+          <p class="hint">默认使用零下载的词法检索；开启后会额外加载约 0.7 GB 嵌入模型，检索更懂中文语义。</p>
+          <div class="kb-tags" id="kb-tags"></div>
+        </section>
+
+        <details class="help">
+          <summary>这个演示在做什么？</summary>
+          <p>页面把《西游记》结构化知识片段放在浏览器里。提问时先本地检索相关片段，再按角色生成回答。</p>
+          <p><strong>智能本地（默认）</strong>：内置精选问答 + 本地知识库，按角色生成回答，零依赖、秒回，是这台无 WebGPU 设备上的可靠选择。<strong>线上开源</strong>：通过本站服务端代理调用云端模型，访客免 Key、免下载。<strong>WebLLM</strong>：Qwen 权重下载到浏览器，WebGPU 本地推理。<strong>LiteRT</strong>：Google 端侧引擎，权重单次流式加载到 WebGPU，首次加载需接受模型许可并下载 2.3 GB 以上文件。</p>
+          <p>云端模式会把问题和知识片段通过本站服务端发送给模型服务；本地模式不离开设备。内容出自《西游记》原著公开情节，用于技术演示。GPT-OSS / Qwen / Gemma 各有开源许可证，商用与分发请分别核查。</p>
+        </details>
+      </aside>
+
+      <main class="chat">
+        <div id="hero" class="hero"></div>
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <div class="composer">
+          <div id="suggestions" class="suggestions"></div>
+          <div class="composer-row">
+            <textarea id="input" rows="1" placeholder="问点什么，比如：孙悟空为什么叫齐天大圣？"></textarea>
+            <button id="send-btn" class="btn btn-send" title="发送">问吧 <span>↵</span></button>
+            <button id="stop-btn" class="btn btn-stop" hidden>停止</button>
+          </div>
+          <p class="composer-note">本地回答：问题与知识片段不离开设备 · 云端回答：问题与检索片段会发送到所配置的服务 · 端侧模型：权重与推理均在本机</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="./knowledge.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

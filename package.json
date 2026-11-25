@@ -1,0 +1,14 @@
+{
+  "name": "xiyou-digital-avatar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "面向公众访问的西游数字分身网页与云端接口代理",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js",
+    "test": "node --test server.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

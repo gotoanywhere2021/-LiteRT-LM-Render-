@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: xiyou-digital-avatar
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: CLOUD_API_URL
+        value: https://text.pollinations.ai/openai
+      - key: CLOUD_MODEL
+        value: openai
+      # 默认使用免费开源模型 GPT-OSS 20B（Pollinations 公共接口），无需 API Key。
+      # 若之后换用需要鉴权的开源服务（如 Groq、自建 vLLM），在此填入对应 Key。
+      - key: CLOUD_API_KEY
+        sync: false
+      - key: TRUST_PROXY
+        value: "1"
